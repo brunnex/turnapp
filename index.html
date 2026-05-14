@@ -1,0 +1,2468 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TurnosApp">
+  <meta name="theme-color" content="#1e40af">
+  <title>TurnosApp - Gestão de Turnos</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- PDF Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+    
+    body {
+      overscroll-behavior: none;
+      touch-action: pan-x pan-y;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    
+    .safe-area {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    
+    input[type="number"] {
+      -moz-appearance: textfield;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCYkQlEuCHmlcJ9dV-iLEp7kUJtaOeX7uM",
+      authDomain: "turnapped.firebaseapp.com",
+      projectId: "turnapped",
+      storageBucket: "turnapped.firebasestorage.app",
+      messagingSenderId: "25909184067",
+      appId: "1:25909184067:web:a11bd8a1de5e16a05bf6f6"
+    };
+    
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    
+    // Ícones SVG inline (substituindo lucide-react)
+    const Calendar = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="3" y1="10" x2="21" y2="10"></line>
+      </svg>
+    );
+    
+    const TrendingUp = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+        <polyline points="17 6 23 6 23 12"></polyline>
+      </svg>
+    );
+    
+    const Settings = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3"></path>
+      </svg>
+    );
+    
+    const Plus = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    );
+    
+    const ChevronLeft = () => (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    );
+    
+    const ChevronRight = () => (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <polyline points="9 18 15 12 9 6"></polyline>
+      </svg>
+    );
+    
+    const X = () => (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    );
+    
+    const Edit2 = () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+      </svg>
+    );
+    
+    const Trash2 = () => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      </svg>
+    );
+    
+    const Building2 = () => (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18M6 12H4a2 2 0 0 0-2 2v8h20v-8a2 2 0 0 0-2-2h-2"></path>
+        <path d="M10 6h4M10 10h4M10 14h4M10 18h4"></path>
+      </svg>
+    );
+    
+    const Clock = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+      </svg>
+    );
+    
+    const Users = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path>
+      </svg>
+    );
+    
+    const Euro = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M4 10h12M4 14h12M17 7c-1.1-2.3-3.2-4-5.7-4-3.9 0-7.1 3.1-7.1 7s3.2 7 7.1 7c2.5 0 4.6-1.7 5.7-4"></path>
+      </svg>
+    );
+
+// Componente principal
+// App principal com autenticação
+function App() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setUser(user);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="text-blue-600 text-4xl mb-4">⏱️</div>
+          <div className="text-gray-600">A carregar...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthScreen />;
+  }
+
+  return <TurnosApp user={user} />;
+}
+
+// Componente de Login/Registo
+function AuthScreen() {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        await auth.signInWithEmailAndPassword(email, password);
+      } else {
+        await auth.createUserWithEmailAndPassword(email, password);
+      }
+    } catch (err) {
+      if (err.code === 'auth/invalid-email') setError('Email inválido');
+      else if (err.code === 'auth/user-not-found') setError('Utilizador não encontrado');
+      else if (err.code === 'auth/wrong-password') setError('Password incorreta');
+      else if (err.code === 'auth/email-already-in-use') setError('Email já em uso');
+      else if (err.code === 'auth/weak-password') setError('Password muito fraca (mín. 6 caracteres)');
+      else setError('Erro: ' + err.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+        <div className="text-center mb-8">
+          <div className="text-4xl mb-2">⏱️</div>
+          <h1 className="text-2xl font-bold text-gray-800">TurnosApp</h1>
+          <p className="text-gray-600 text-sm mt-1">Gestão de Turnos</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+              autoComplete="email"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+              autoComplete={isLogin ? "current-password" : "new-password"}
+            />
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400"
+          >
+            {loading ? 'A processar...' : (isLogin ? 'Entrar' : 'Criar Conta')}
+          </button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => setIsLogin(!isLogin)}
+            className="text-blue-600 text-sm hover:underline"
+          >
+            {isLogin ? 'Não tens conta? Cria aqui' : 'Já tens conta? Entra aqui'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TurnosApp({ user }) {
+  const [locais, setLocais] = useState([]);
+  const [turnos, setTurnos] = useState([]);
+  const [activeTab, setActiveTab] = useState('calendario');
+  const [mesAtual, setMesAtual] = useState(new Date());
+  const [showNovoLocal, setShowNovoLocal] = useState(false);
+  const [showNovoTurno, setShowNovoTurno] = useState(false);
+  const [dataSelecionada, setDataSelecionada] = useState(null);
+  const [showDetalhes, setShowDetalhes] = useState(false);
+  const [turnoSelecionado, setTurnoSelecionado] = useState(null);
+  const [showConfirmacao, setShowConfirmacao] = useState(false);
+  const [acaoConfirmacao, setAcaoConfirmacao] = useState(null);
+  const [mensagemConfirmacao, setMensagemConfirmacao] = useState('');
+  const [syncing, setSyncing] = useState(true);
+
+  // Carregar dados do Firestore
+  useEffect(() => {
+    if (!user) return;
+
+    setSyncing(true);
+    const unsubscribeLocais = db.collection('users').doc(user.uid).collection('locais')
+      .onSnapshot((snapshot) => {
+        const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.data().id || doc.id }));
+        setLocais(data);
+        setSyncing(false);
+      });
+
+    const unsubscribeTurnos = db.collection('users').doc(user.uid).collection('turnos')
+      .onSnapshot((snapshot) => {
+        const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.data().id || doc.id }));
+        setTurnos(data);
+      });
+
+    return () => {
+      unsubscribeLocais();
+      unsubscribeTurnos();
+    };
+  }, [user]);
+
+  const cores = [
+    // Roxo (5 tons)
+    '#5B21B6', '#7C3AED', '#8B5CF6', '#A78BFA', '#C4B5FD',
+    // Azul (5 tons)
+    '#1E40AF', '#2563EB', '#3B82F6', '#60A5FA', '#93C5FD',
+    // Verde (5 tons)
+    '#065F46', '#059669', '#10B981', '#34D399', '#6EE7B7',
+    // Vermelho para Rosa (5 tons) - degradé suave
+    '#DC2626', '#EF4444', '#F87171', '#FC8DA6', '#FDA4AF',
+    // Laranja para Amarelo (5 tons)
+    '#FF6B00', '#FF8C00', '#FFA500', '#FFB836', '#FFC947'
+  ];
+
+  const corPadraoPorTipo = (tipo) => {
+    switch(tipo) {
+      case 'Consultório': return cores[22]; // Amarelo
+      case 'Urgência': return cores[7]; // Azul
+      case 'Prevenção': return cores[12]; // Verde
+      case 'Férias': return cores[16]; // Vermelho
+      default: return cores[0];
+    }
+  };
+
+  return (
+    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+      {/* Sync Indicator */}
+      {syncing && (
+        <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 text-center text-sm text-blue-700 flex items-center justify-center gap-2">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700"></div>
+          <span>A sincronizar dados...</span>
+        </div>
+      )}
+      
+      {/* Conteúdo */}
+      <div className="flex-1 overflow-hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        {activeTab === 'calendario' && (
+          <div className="h-full">
+            <CalendarioView 
+            locais={locais}
+            turnos={turnos}
+            setTurnos={setTurnos}
+            mesAtual={mesAtual}
+            setMesAtual={setMesAtual}
+            setShowNovoTurno={setShowNovoTurno}
+            setDataSelecionada={setDataSelecionada}
+            setShowDetalhes={setShowDetalhes}
+            setTurnoSelecionado={setTurnoSelecionado}
+          />
+          </div>
+        )}
+        {activeTab === 'resumos' && (
+          <ResumosView locais={locais} turnos={turnos} />
+        )}
+        {activeTab === 'definicoes' && (
+          <LocaisView 
+            locais={locais}
+            setLocais={setLocais}
+            setShowNovoLocal={setShowNovoLocal}
+            cores={cores}
+            user={user}
+          />
+        )}
+      </div>
+
+      {/* Modais */}
+      {showNovoLocal && (
+        <NovoLocalModal
+          onClose={() => setShowNovoLocal(false)}
+          onSave={async (local) => {
+            const novoLocal = { ...local, id: Date.now() };
+            await db.collection('users').doc(user.uid).collection('locais').doc(String(novoLocal.id)).set(novoLocal);
+            setShowNovoLocal(false);
+          }}
+          cores={cores}
+        />
+      )}
+
+      {showNovoTurno && (
+        <NovoTurnoModal
+          data={dataSelecionada}
+          locais={locais}
+          onClose={() => setShowNovoTurno(false)}
+          onSave={async (turno) => {
+            const novoTurno = { ...turno, id: Date.now() };
+            await db.collection('users').doc(user.uid).collection('turnos').doc(String(novoTurno.id)).set(novoTurno);
+            setShowNovoTurno(false);
+          }}
+        />
+      )}
+
+      {showDetalhes && turnoSelecionado && (
+        <DetalhesTurnoModal
+          turno={turnoSelecionado}
+          locais={locais}
+          turnos={turnos}
+          setTurnos={setTurnos}
+          user={user}
+          onClose={() => {
+            setShowDetalhes(false);
+            setTurnoSelecionado(null);
+          }}
+        />
+      )}
+
+      {/* Modal de Confirmação */}
+      {showConfirmacao && (
+        <ConfirmacaoModal
+          mensagem={mensagemConfirmacao}
+          onConfirmar={() => {
+            if (acaoConfirmacao) acaoConfirmacao();
+            setShowConfirmacao(false);
+            setAcaoConfirmacao(null);
+          }}
+          onCancelar={() => {
+            setShowConfirmacao(false);
+            setAcaoConfirmacao(null);
+          }}
+        />
+      )}
+
+      {/* Bottom Navigation */}
+      <div className="bg-white border-t flex-shrink-0" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="flex">
+          <button
+            onClick={() => setActiveTab('calendario')}
+            className={`flex-1 py-3 flex flex-col items-center justify-center gap-1 ${
+              activeTab === 'calendario' ? 'text-blue-600' : 'text-gray-500'
+            }`}
+          >
+            <Calendar size={24} />
+            <span className="text-xs font-medium">Calendário</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('resumos')}
+            className={`flex-1 py-3 flex flex-col items-center justify-center gap-1 ${
+              activeTab === 'resumos' ? 'text-blue-600' : 'text-gray-500'
+            }`}
+          >
+            <TrendingUp size={24} />
+            <span className="text-xs font-medium">Resumo</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('definicoes')}
+            className={`flex-1 py-3 flex flex-col items-center justify-center gap-1 ${
+              activeTab === 'definicoes' ? 'text-blue-600' : 'text-gray-500'
+            }`}
+          >
+            <Settings size={24} />
+            <span className="text-xs font-medium">Definições</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// View de Definições (antigo Locais)
+function LocaisView({ locais, setLocais, setShowNovoLocal, cores, user }) {
+  const [subTab, setSubTab] = useState('turnos');
+
+  return (
+    <div className="h-full flex flex-col bg-gray-50">
+      <div className="bg-white p-4 border-b flex-shrink-0">
+        <h1 className="text-2xl font-bold">Definições</h1>
+      </div>
+
+      {/* Sub Tabs */}
+      <div className="bg-white border-b px-4 flex-shrink-0">
+        <div className="flex gap-6">
+          <button
+            onClick={() => setSubTab('turnos')}
+            className={`py-3 border-b-2 ${
+              subTab === 'turnos' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'
+            }`}
+          >
+            Turnos
+          </button>
+          <button
+            onClick={() => setSubTab('idioma')}
+            className={`py-3 border-b-2 ${
+              subTab === 'idioma' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'
+            }`}
+          >
+            Idioma
+          </button>
+          <button
+            onClick={() => setSubTab('esquema')}
+            className={`py-3 border-b-2 ${
+              subTab === 'esquema' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'
+            }`}
+          >
+            Esquema
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-hidden">
+        {subTab === 'turnos' && (
+          <div className="h-full p-4">
+            <TurnosSettings locais={locais} setLocais={setLocais} setShowNovoLocal={setShowNovoLocal} cores={cores} user={user} />
+          </div>
+        )}
+        {subTab === 'idioma' && (
+          <div className="p-4 overflow-y-auto h-full">
+            <div className="bg-white rounded-lg">
+              <button className="w-full p-4 text-left flex justify-between items-center border-b">
+                <span>Português</span>
+                <span className="text-blue-600">✓</span>
+              </button>
+              <button className="w-full p-4 text-left flex justify-between items-center text-gray-400">
+                <span>English</span>
+                <span className="text-gray-300">(em breve)</span>
+              </button>
+            </div>
+          </div>
+        )}
+        {subTab === 'esquema' && (
+          <div className="p-4 overflow-y-auto h-full">
+            <div className="bg-white rounded-lg">
+              <button className="w-full p-4 text-left flex justify-between items-center border-b">
+                <span>Claro</span>
+                <span className="text-blue-600">✓</span>
+              </button>
+              <button className="w-full p-4 text-left flex justify-between items-center border-b text-gray-400">
+                <span>Escuro</span>
+                <span className="text-gray-300">(em breve)</span>
+              </button>
+              <button className="w-full p-4 text-left flex justify-between items-center text-gray-400">
+                <span>Sistema</span>
+                <span className="text-gray-300">(em breve)</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Logout Button */}
+      <div className="p-4 border-t bg-white flex-shrink-0">
+        <button
+          onClick={() => auth.signOut()}
+          className="w-full bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700"
+        >
+          Terminar Sessão
+        </button>
+        <p className="text-center text-xs text-gray-500 mt-2">
+          {user?.email}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Settings de Turnos (antigo LocaisView)
+function TurnosSettings({ locais, setLocais, setShowNovoLocal, cores, user }) {
+  const [showConfirmacao, setShowConfirmacao] = useState(false);
+  const [localParaEliminar, setLocalParaEliminar] = useState(null);
+  const [showEditarLocal, setShowEditarLocal] = useState(false);
+  const [localParaEditar, setLocalParaEditar] = useState(null);
+
+  const eliminarLocal = (id) => {
+    setLocalParaEliminar(id);
+    setShowConfirmacao(true);
+  };
+
+  const confirmarEliminacao = async () => {
+    if (localParaEliminar) {
+      await db.collection('users').doc(user.uid).collection('locais').doc(String(localParaEliminar)).delete();
+    }
+    setShowConfirmacao(false);
+    setLocalParaEliminar(null);
+  };
+
+  const abrirEdicao = (local) => {
+    setLocalParaEditar(local);
+    setShowEditarLocal(true);
+  };
+
+  const salvarEdicao = async (localEditado) => {
+    await db.collection('users').doc(user.uid).collection('locais').doc(String(localEditado.id)).set(localEditado);
+    setShowEditarLocal(false);
+    setLocalParaEditar(null);
+  };
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="flex justify-between items-center mb-4 flex-shrink-0">
+        <h2 className="text-lg font-semibold">Locais de Trabalho</h2>
+        <button
+          onClick={() => setShowNovoLocal(true)}
+          className="bg-blue-600 text-white p-2 rounded-full"
+        >
+          <Plus size={24} />
+        </button>
+      </div>
+
+      {locais.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-lg">
+          <Building2 size={64} className="mx-auto text-gray-300 mb-4" />
+          <p className="text-gray-500 mb-4">Nenhum local definido</p>
+          <button
+            onClick={() => setShowNovoLocal(true)}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium"
+          >
+            Adicionar Primeiro Local
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3 flex-1 overflow-y-auto">
+          {locais.map(local => (
+            <div key={local.id} className="bg-white p-4 rounded-lg shadow-sm flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-full flex-shrink-0"
+                style={{ backgroundColor: local.cor }}
+              />
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold truncate">{local.nome}</h3>
+                <p className="text-sm text-gray-500">{local.tipo}</p>
+              </div>
+              <div className="text-right">
+                {(local.tipo === 'Urgência' || local.tipo === 'Prevenção') ? (
+                  <p className="text-sm font-medium">{local.valorPorHora}€/h</p>
+                ) : local.tipo === 'Consultório' ? (
+                  <p className="text-sm font-medium">{local.valorConsulta}€</p>
+                ) : (
+                  <p className="text-sm font-medium text-gray-400">-</p>
+                )}
+              </div>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    abrirEdicao(local);
+                  }}
+                  className="text-blue-500 p-2 hover:bg-blue-50 rounded active:bg-blue-100"
+                >
+                  <Edit2 size={18} />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    eliminarLocal(local.id);
+                  }}
+                  className="text-red-500 p-2 hover:bg-red-50 rounded active:bg-red-100"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal de Confirmação */}
+      {showConfirmacao && (
+        <ConfirmacaoModal
+          mensagem="Tem certeza que deseja eliminar este local?"
+          onConfirmar={confirmarEliminacao}
+          onCancelar={() => setShowConfirmacao(false)}
+        />
+      )}
+
+      {/* Modal de Edição */}
+      {showEditarLocal && (
+        <NovoLocalModal
+          onClose={() => {
+            setShowEditarLocal(false);
+            setLocalParaEditar(null);
+          }}
+          onSave={salvarEdicao}
+          cores={cores}
+          localParaEditar={localParaEditar}
+        />
+      )}
+    </div>
+  );
+}
+
+// View do Calendário
+function CalendarioView({ locais, turnos, setTurnos, mesAtual, setMesAtual, setShowNovoTurno, setDataSelecionada, setShowDetalhes, setTurnoSelecionado }) {
+  const diasSemana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  
+  // Filtros
+  const [filtros, setFiltros] = useState({
+    'Consultório': true,
+    'Urgência': true,
+    'Prevenção': true,
+    'Férias': true
+  });
+
+  const toggleFiltro = (tipo) => {
+    setFiltros({...filtros, [tipo]: !filtros[tipo]});
+  };
+  
+  const getDiasDoMes = () => {
+    const ano = mesAtual.getFullYear();
+    const mes = mesAtual.getMonth();
+    const primeiroDia = new Date(ano, mes, 1);
+    const ultimoDia = new Date(ano, mes + 1, 0);
+    
+    const dias = [];
+    const diaSemana = (primeiroDia.getDay() + 6) % 7;
+    
+    for (let i = 0; i < diaSemana; i++) {
+      dias.push(null);
+    }
+    
+    for (let dia = 1; dia <= ultimoDia.getDate(); dia++) {
+      dias.push(new Date(ano, mes, dia));
+    }
+    
+    return dias;
+  };
+
+  const getTurnosDoMes = () => {
+    return turnos.filter(t => {
+      const data = new Date(t.data);
+      return data.getMonth() === mesAtual.getMonth() && 
+             data.getFullYear() === mesAtual.getFullYear();
+    });
+  };
+
+  const calcularTotal = () => {
+    return getTurnosDoMes().reduce((total, turno) => {
+      const local = locais.find(l => l.id === turno.localId);
+      if (!local) return total;
+      
+      if (turno.tipo === 'Urgência' || turno.tipo === 'Prevenção') {
+        const horasTrabalhadas = turno.horasTrabalhadas || 0;
+        const horasExtra = turno.horasExtra || 0;
+        
+        // horasTrabalhadas já tem tudo calculado (incluindo saída antecipada)
+        const horasNormais = horasTrabalhadas - horasExtra;
+        
+        const valorHoraNormal = local.valorPorHora || 0;
+        const valorHoraExtra = local.valorHoraExtra || valorHoraNormal;
+        
+        const valorNormal = horasNormais * valorHoraNormal;
+        const valorExtraParcela = horasExtra * valorHoraExtra;
+        
+        return total + valorNormal + valorExtraParcela;
+      } else if (turno.tipo === 'Consultório') {
+        const valorBrutoConsultas = (turno.numeroConsultas || 0) * (local.valorConsulta || 0);
+        const valorBrutoUrgencias = (turno.numeroUrgencias || 0) * (local.valorUrgenciaConsultorio || 0);
+        const valorBrutoTotal = valorBrutoConsultas + valorBrutoUrgencias;
+        const comissao = (local.comissaoClinica || 0) / 100;
+        const valorLiquido = valorBrutoTotal * (1 - comissao);
+        return total + valorLiquido;
+      }
+      return total; // Férias
+    }, 0);
+  };
+
+  const mesAnterior = () => {
+    setMesAtual(new Date(mesAtual.getFullYear(), mesAtual.getMonth() - 1, 1));
+  };
+
+  const proximoMes = () => {
+    setMesAtual(new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 1));
+  };
+
+  const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header do Mês */}
+      <div className="bg-white p-4 border-b flex-shrink-0">
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={mesAnterior} className="p-2">
+            <ChevronLeft size={24} />
+          </button>
+          <h2 className="text-xl font-bold">
+            {meses[mesAtual.getMonth()]} {mesAtual.getFullYear()}
+          </h2>
+          <button onClick={proximoMes} className="p-2">
+            <ChevronRight size={24} />
+          </button>
+        </div>
+        
+        {/* Filtros */}
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {['Consultório', 'Urgência', 'Prevenção', 'Férias'].map(tipo => (
+            <button
+              key={tipo}
+              onClick={() => toggleFiltro(tipo)}
+              className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                filtros[tipo] ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+              }`}
+            >
+              {tipo}
+            </button>
+          ))}
+        </div>
+        
+        {/* Dias da Semana */}
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {diasSemana.map(dia => (
+            <div key={dia} className="text-center text-xs font-semibold text-gray-500">
+              {dia}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Grid + Stats - SEM SCROLL, TUDO VISÍVEL */}
+      <div className="flex-1 flex flex-col p-2 overflow-hidden">
+        {/* Grid com altura calculada (75% do espaço) */}
+        <div className="grid grid-cols-7 gap-1" style={{ flex: '0 0 75%', minHeight: 0 }}>
+          {getDiasDoMes().map((data, idx) => (
+            <CelulaDia
+              key={idx}
+              data={data}
+              turnos={turnos.filter(t => {
+                if (!data) return false;
+                if (!filtros[t.tipo]) return false;
+                const tData = new Date(t.data);
+                return tData.toDateString() === data.toDateString();
+              })}
+              locais={locais}
+              onClick={() => {
+                if (data) {
+                  setDataSelecionada(data);
+                  setShowNovoTurno(true);
+                }
+              }}
+              onTurnoClick={(turno) => {
+                setTurnoSelecionado(turno);
+                setShowDetalhes(true);
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Estatísticas (25% do espaço) */}
+        <div className="bg-white p-3 mt-2" style={{ flex: '0 0 25%', minHeight: 0, overflow: 'hidden' }}>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="bg-yellow-50 p-2 rounded-lg">
+              <div className="text-[10px] text-yellow-700 mb-0.5">Consultas de Rotina</div>
+              <div className="text-base font-bold text-yellow-700">
+                {getTurnosDoMes()
+                  .filter(t => locais.find(l => l.id === t.localId))
+                  .reduce((total, t) => total + (t.numeroConsultas || 0), 0)}
+              </div>
+            </div>
+            <div className="bg-orange-50 p-2 rounded-lg">
+              <div className="text-[10px] text-orange-600 mb-0.5">Consultas de Urgência</div>
+              <div className="text-base font-bold text-orange-600">
+                {getTurnosDoMes()
+                  .filter(t => locais.find(l => l.id === t.localId))
+                  .reduce((total, t) => total + (t.numeroUrgencias || 0), 0)}
+              </div>
+            </div>
+            <div className="bg-blue-50 p-2 rounded-lg">
+              <div className="text-[10px] text-blue-600 mb-0.5">Turnos de Urgência</div>
+              <div className="text-base font-bold text-blue-600">
+                {getTurnosDoMes()
+                  .filter(t => t.tipo === 'Urgência' && locais.find(l => l.id === t.localId))
+                  .length}
+              </div>
+            </div>
+            <div className="bg-green-50 p-2 rounded-lg">
+              <div className="text-[10px] text-green-600 mb-0.5">Turnos de Prevenção</div>
+              <div className="text-base font-bold text-green-600">
+                {getTurnosDoMes()
+                  .filter(t => t.tipo === 'Prevenção' && locais.find(l => l.id === t.localId))
+                  .length}
+              </div>
+            </div>
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] text-gray-400">v1.0 · Fevereiro 2026</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Célula do Dia
+function CelulaDia({ data, turnos, locais, onClick, onTurnoClick }) {
+  if (!data) {
+    return <div className="h-full bg-gray-100 rounded" />;
+  }
+
+  const hoje = new Date().toDateString() === data.toDateString();
+
+  return (
+    <div
+      onClick={onClick}
+      className="h-full bg-white border rounded p-1 cursor-pointer hover:bg-gray-50 flex flex-col overflow-hidden"
+    >
+      <div className={`text-xs mb-1 flex-shrink-0 ${hoje ? 'bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold' : ''}`}>
+        {data.getDate()}
+      </div>
+      <div className="space-y-0.5 flex-1 overflow-hidden">
+        {turnos.slice(0, 3).map(turno => {
+          const local = locais.find(l => l.id === turno.localId);
+          if (!local) return null;
+          
+          return (
+            <div
+              key={turno.id}
+              onClick={(e) => {
+                e.stopPropagation();
+                onTurnoClick(turno);
+              }}
+              className="text-xs p-0.5 rounded truncate"
+              style={{ 
+                backgroundColor: local.cor + '20',
+                borderLeft: `3px solid ${local.cor}`
+              }}
+            >
+              <div className="font-semibold truncate text-[10px]">{local.abreviatura || local.nome}</div>
+              {turno.tipo === 'Consultório' && turno.totalConsultas > 0 && (
+                <div className="text-[9px] text-gray-600">{turno.totalConsultas}</div>
+              )}
+              {(turno.tipo === 'Urgência' || turno.tipo === 'Prevenção') && turno.horasTrabalhadas && (
+                <div className="text-[9px] text-gray-600">
+                  {turno.horasTrabalhadas % 1 === 0 
+                    ? turno.horasTrabalhadas.toFixed(0) 
+                    : turno.horasTrabalhadas.toFixed(1)}h
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Componente Mapa de Pagamentos
+function MapaPagamentos({ turnos, locais, mesAtual, onClose }) {
+  const calcularValorTurno = (turno, local) => {
+    if (turno.tipo === 'Urgência' || turno.tipo === 'Prevenção') {
+      const horasTrabalhadas = turno.horasTrabalhadas || 0;
+      const horasExtra = turno.horasExtra || 0;
+      const horasNormais = horasTrabalhadas - horasExtra;
+      const valorHoraNormal = local.valorPorHora || 0;
+      const valorHoraExtra = local.valorHoraExtra || valorHoraNormal;
+      return (horasNormais * valorHoraNormal) + (horasExtra * valorHoraExtra);
+    }
+    return 0;
+  };
+
+  const turnosFiltrados = turnos.filter(t => t.tipo === 'Urgência' || t.tipo === 'Prevenção');
+  const mes = mesAtual.getMonth();
+  const ano = mesAtual.getFullYear();
+  
+  const linhas = [];
+  let horasTransitamAnterior = 0;
+  let horasTransitamSeguinte = 0;
+
+  turnosFiltrados.forEach(turno => {
+    const local = locais.find(l => l.id === turno.localId);
+    if (!local) return;
+
+    
+    // Parse ISO date: "2026-04-22T23:00:00.000Z"
+    const dataTurno = new Date(turno.data);
+    const anoInicio = dataTurno.getFullYear();
+    const mesInicio = dataTurno.getMonth() + 1;
+    const diaInicio = dataTurno.getDate();
+    
+    
+    const [horaInicio, minInicio] = turno.horaInicio.split(':').map(Number);
+    const [horaFim, minFim] = turno.horaFim.split(':').map(Number);
+
+    let dataInicio = new Date(anoInicio, mesInicio - 1, diaInicio, horaInicio, minInicio);
+    let dataFim = new Date(anoInicio, mesInicio - 1, diaInicio, horaFim, minFim);
+
+    // Turno de 24h: início e fim são iguais
+    if (turno.turno24h || (horaFim === horaInicio && minFim === minInicio && turno.horasTrabalhadas >= 24)) {
+      dataFim.setDate(dataFim.getDate() + 1);
+    } else if (horaFim < horaInicio || (horaFim === horaInicio && minFim < minInicio)) {
+      dataFim.setDate(dataFim.getDate() + 1);
+    }
+    
+
+    const valorTotal = calcularValorTurno(turno, local);
+    const duracaoTotal = (dataFim - dataInicio) / (1000 * 60 * 60);
+    
+    // Se o turno tem horasTrabalhadas diferente da duração calculada, usar horasTrabalhadas
+    const usarHorasTrabalhadas = turno.horasTrabalhadas && Math.abs(turno.horasTrabalhadas - duracaoTotal) > 0.1;
+
+    let dataAtual = new Date(dataInicio);
+    
+    while (dataAtual < dataFim) {
+      const diaAtual = dataAtual.getDate();
+      const mesAtualTurno = dataAtual.getMonth();
+      const anoAtualTurno = dataAtual.getFullYear();
+
+      const proximaMeiaNoite = new Date(anoAtualTurno, mesAtualTurno, diaAtual + 1, 0, 0, 0);
+      const fimDia = proximaMeiaNoite < dataFim ? proximaMeiaNoite : dataFim;
+      let horasNesteDia = (fimDia - dataAtual) / (1000 * 60 * 60);
+      
+      // Se turno cabe num só dia e tem horasTrabalhadas, usar esse valor
+      if (usarHorasTrabalhadas && dataInicio.getDate() === dataFim.getDate()) {
+        horasNesteDia = turno.horasTrabalhadas;
+      }
+      
+      const proporcao = horasNesteDia / (usarHorasTrabalhadas && dataInicio.getDate() === dataFim.getDate() ? turno.horasTrabalhadas : duracaoTotal);
+      const valorNesteDia = valorTotal * proporcao;
+
+      if (mesAtualTurno === mes && anoAtualTurno === ano) {
+        const transitaAnterior = diaAtual === 1 && dataInicio < new Date(ano, mes, 1);
+        const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
+        const transitaSeguinte = diaAtual === ultimoDiaMes && dataFim > new Date(ano, mes + 1, 0, 23, 59, 59);
+
+        
+        linhas.push({
+          dia: diaAtual,
+          tipo: turno.tipo,
+          horas: horasNesteDia,
+          valor: valorNesteDia,
+          transitaAnterior,
+          transitaSeguinte,
+          temHorasExtra: (turno.horasExtra || 0) > 0,
+          temSaidaAntecipada: (turno.saidaAntecipada || 0) > 0
+        });
+      } else {
+      }
+
+      if (diaAtual === 1 && dataInicio < new Date(ano, mes, 1)) {
+        horasTransitamAnterior += horasNesteDia;
+      }
+      
+      const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
+      if (diaAtual === ultimoDiaMes && dataFim > new Date(ano, mes + 1, 0, 23, 59, 59)) {
+        horasTransitamSeguinte += (dataFim - new Date(ano, mes + 1, 0, 23, 59, 59)) / (1000 * 60 * 60);
+      }
+
+      dataAtual = fimDia;
+    }
+  });
+
+  linhas.sort((a, b) => a.dia - b.dia);
+
+  const linhasPorDia = {};
+  linhas.forEach(linha => {
+    if (!linhasPorDia[linha.dia]) linhasPorDia[linha.dia] = [];
+    linhasPorDia[linha.dia].push(linha);
+  });
+
+  const totais = linhas.reduce((acc, linha) => {
+    if (!acc[linha.tipo]) acc[linha.tipo] = { horas: 0, valor: 0 };
+    acc[linha.tipo].horas += linha.horas;
+    acc[linha.tipo].valor += linha.valor;
+    return acc;
+  }, {});
+
+  const totalGeral = {
+    horas: Object.values(totais).reduce((sum, t) => sum + t.horas, 0),
+    valor: Object.values(totais).reduce((sum, t) => sum + t.valor, 0)
+  };
+
+  const formatHoras = (h) => h % 1 === 0 ? h.toFixed(0) : h.toFixed(1);
+  const mesNome = mesAtual.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' }).toUpperCase();
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)', paddingBottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}>
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center p-4 border-b">
+          <h2 className="text-xl font-bold">Mapa de Pagamentos - {mesNome}</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X size={24} />
+          </button>
+        </div>
+
+        <div id="mapa-content" className="flex-1 overflow-y-auto p-4">
+          {horasTransitamAnterior > 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 flex items-center gap-2">
+              <span className="text-yellow-600 text-xl">⚠️</span>
+              <span className="text-sm text-yellow-800">
+                Transitam {formatHoras(horasTransitamAnterior)}h do mês anterior
+              </span>
+            </div>
+          )}
+
+          <div className="bg-white border rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-100 border-b">
+                <tr>
+                  <th className="text-left p-3 font-semibold">DIA</th>
+                  <th className="text-left p-3 font-semibold">TIPO</th>
+                  <th className="text-right p-3 font-semibold">HORAS</th>
+                  <th className="text-right p-3 font-semibold">VALOR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.keys(linhasPorDia).map(dia => (
+                  linhasPorDia[dia].map((linha, idx) => (
+                    <tr key={`${dia}-${idx}`} className="border-b hover:bg-gray-50">
+                      <td className="p-3 font-medium">{idx === 0 ? dia : ''}</td>
+                      <td className="p-3 text-gray-700">{linha.tipo}</td>
+                      <td className="p-3 text-right">
+                        {formatHoras(linha.horas)}h
+                        {(linha.transitaAnterior || linha.transitaSeguinte || linha.temHorasExtra || linha.temSaidaAntecipada) && (
+                          <span className="text-yellow-600 ml-1">⚠️</span>
+                        )}
+                      </td>
+                      <td className="p-3 text-right font-medium">{linha.valor.toFixed(2)}€</td>
+                    </tr>
+                  ))
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-4 bg-gray-50 rounded-lg p-4 space-y-2">
+            <div className="font-semibold text-sm text-gray-700 mb-2">TOTAIS:</div>
+            {Object.keys(totais).map(tipo => (
+              <div key={tipo} className="flex justify-between text-sm">
+                <span className="text-gray-700">{tipo}:</span>
+                <span className="font-medium">
+                  {formatHoras(totais[tipo].horas)}h · {totais[tipo].valor.toFixed(2)}€
+                </span>
+              </div>
+            ))}
+            <div className="border-t pt-2 mt-2">
+              <div className="flex justify-between font-bold">
+                <span>TOTAL:</span>
+                <span>{formatHoras(totalGeral.horas)}h · {totalGeral.valor.toFixed(2)}€</span>
+              </div>
+            </div>
+          </div>
+
+          {horasTransitamSeguinte > 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4 flex items-center gap-2">
+              <span className="text-yellow-600 text-xl">⚠️</span>
+              <span className="text-sm text-yellow-800">
+                Transitam {formatHoras(horasTransitamSeguinte)}h para o mês seguinte
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 border-t bg-gray-50 space-y-2">
+          <button 
+            onClick={() => {
+              // Gerar PDF
+              const element = document.getElementById('mapa-content');
+              const opt = {
+                margin: 10,
+                filename: `mapa-pagamentos-${mesAtual.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+              };
+              html2pdf().set(opt).from(element).save();
+            }}
+            className="w-full bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 flex items-center justify-center gap-2"
+          >
+            <span>📄</span>
+            <span>Exportar PDF</span>
+          </button>
+          <button onClick={onClose} className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700">
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// View de Resumos
+function ResumosView({ locais, turnos }) {
+  const [periodo, setPeriodo] = useState('mensal');
+  const [mesAtual, setMesAtual] = useState(new Date());
+  const [anoAtual, setAnoAtual] = useState(new Date().getFullYear());
+  const [showMapaPagamentos, setShowMapaPagamentos] = useState(false);
+
+  const calcularValorTurno = (turno) => {
+    const local = locais.find(l => l.id === turno.localId);
+    if (!local) return 0;
+    
+    if (turno.tipo === 'Urgência' || turno.tipo === 'Prevenção') {
+      const horasTrabalhadas = turno.horasTrabalhadas || 0;
+      const horasExtra = turno.horasExtra || 0;
+      
+      // horasTrabalhadas já tem tudo calculado (incluindo saída antecipada)
+      // Horas normais = total - extra
+      const horasNormais = horasTrabalhadas - horasExtra;
+      
+      const valorHoraNormal = local.valorPorHora || 0;
+      const valorHoraExtra = local.valorHoraExtra || valorHoraNormal;
+      
+      const valorNormal = horasNormais * valorHoraNormal;
+      const valorExtraParcela = horasExtra * valorHoraExtra;
+      
+      return valorNormal + valorExtraParcela;
+    } else if (turno.tipo === 'Consultório') {
+      const valorBrutoConsultas = (turno.numeroConsultas || 0) * (local.valorConsulta || 0);
+      const valorBrutoUrgencias = (turno.numeroUrgencias || 0) * (local.valorUrgenciaConsultorio || 0);
+      const valorBrutoTotal = valorBrutoConsultas + valorBrutoUrgencias;
+      
+      // Aplicar comissão da clínica
+      const comissao = (local.comissaoClinica || 0) / 100;
+      const valorLiquido = valorBrutoTotal * (1 - comissao);
+      
+      return valorLiquido;
+    }
+    
+    // Férias não tem valor
+    return 0;
+  };
+
+  const getTurnosMes = () => {
+    return turnos.filter(t => {
+      const data = new Date(t.data);
+      return data.getMonth() === mesAtual.getMonth() && 
+             data.getFullYear() === mesAtual.getFullYear();
+    });
+  };
+
+  const getTurnosAno = () => {
+    return turnos.filter(t => {
+      const data = new Date(t.data);
+      return data.getFullYear() === anoAtual;
+    });
+  };
+
+  const calcularTotalMes = () => {
+    return getTurnosMes().reduce((total, t) => total + calcularValorTurno(t), 0);
+  };
+
+  const calcularTotalAno = () => {
+    return getTurnosAno().reduce((total, t) => total + calcularValorTurno(t), 0);
+  };
+
+  const totaisPorLocalMes = () => {
+    const totais = {};
+    getTurnosMes().forEach(turno => {
+      if (!totais[turno.localId]) totais[turno.localId] = 0;
+      totais[turno.localId] += calcularValorTurno(turno);
+    });
+    return Object.entries(totais).map(([localId, valor]) => ({
+      local: locais.find(l => l.id === parseInt(localId)),
+      valor
+    })).filter(item => item.local);
+  };
+
+  const totaisPorLocalAno = () => {
+    const totais = {};
+    getTurnosAno().forEach(turno => {
+      if (!totais[turno.localId]) totais[turno.localId] = 0;
+      totais[turno.localId] += calcularValorTurno(turno);
+    });
+    return Object.entries(totais).map(([localId, valor]) => ({
+      local: locais.find(l => l.id === parseInt(localId)),
+      valor
+    })).filter(item => item.local);
+  };
+
+  const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+  return (
+    <div className="h-full overflow-y-auto p-4">
+      {/* Seletor */}
+      <div className="mb-4">
+        <div className="flex bg-gray-200 rounded-lg p-1">
+          <button
+            onClick={() => setPeriodo('mensal')}
+            className={`flex-1 py-2 rounded-md ${periodo === 'mensal' ? 'bg-white shadow' : ''}`}
+          >
+            Mensal
+          </button>
+          <button
+            onClick={() => setPeriodo('anual')}
+            className={`flex-1 py-2 rounded-md ${periodo === 'anual' ? 'bg-white shadow' : ''}`}
+          >
+            Anual
+          </button>
+        </div>
+      </div>
+
+      {periodo === 'mensal' ? (
+        <>
+          {/* Navegação Mês */}
+          <div className="flex items-center justify-between mb-6">
+            <button onClick={() => setMesAtual(new Date(mesAtual.getFullYear(), mesAtual.getMonth() - 1))} className="p-2">
+              <ChevronLeft size={24} />
+            </button>
+            <h2 className="text-xl font-bold">
+              {meses[mesAtual.getMonth()]} {mesAtual.getFullYear()}
+            </h2>
+            <button onClick={() => setMesAtual(new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1))} className="p-2">
+              <ChevronRight size={24} />
+            </button>
+          </div>
+
+          {/* Total */}
+          <div className="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-xl mb-6 text-center">
+            <p className="text-sm opacity-90 mb-2">Total do Mês</p>
+            <p className="text-4xl font-bold">{calcularTotalMes().toFixed(2)}€</p>
+          </div>
+
+          {/* Por Local */}
+          {totaisPorLocalMes().length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-3">Por Local</h3>
+              <div className="space-y-2">
+                {totaisPorLocalMes().map(({ local, valor }) => {
+                  const turnosLocal = getTurnosMes().filter(t => t.localId === local.id);
+                  const consultasRotina = turnosLocal.reduce((sum, t) => sum + (t.numeroConsultas || 0), 0);
+                  const consultasUrgencia = turnosLocal.reduce((sum, t) => sum + (t.numeroUrgencias || 0), 0);
+                  const horasUrgencia = turnosLocal
+                    .filter(t => t.tipo === 'Urgência')
+                    .reduce((sum, t) => sum + (t.horasTrabalhadas || 0), 0);
+                  const horasPrevencao = turnosLocal
+                    .filter(t => t.tipo === 'Prevenção')
+                    .reduce((sum, t) => sum + (t.horasTrabalhadas || 0), 0);
+                  
+                  const formatHoras = (h) => h % 1 === 0 ? h.toFixed(0) : h.toFixed(1);
+                  
+                  return (
+                    <div key={local.id} className="bg-white p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: local.cor }} />
+                        <span className="font-medium">{local.nome}</span>
+                      </div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-2xl font-bold text-green-600">{valor.toFixed(2)}€</span>
+                        <span className="text-sm text-gray-500">
+                          {((valor / calcularTotalMes()) * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      {/* Estatísticas discretas */}
+                      <div className="text-xs text-gray-500 space-y-0.5 mt-2 pt-2 border-t">
+                        {consultasRotina > 0 && (
+                          <div className="flex justify-between">
+                            <span>Consultas de Rotina:</span>
+                            <span>{consultasRotina}</span>
+                          </div>
+                        )}
+                        {consultasUrgencia > 0 && (
+                          <div className="flex justify-between">
+                            <span>Consultas de Urgência:</span>
+                            <span>{consultasUrgencia}</span>
+                          </div>
+                        )}
+                        {horasUrgencia > 0 && (
+                          <div className="flex justify-between">
+                            <span>Horas de Urgência:</span>
+                            <span>{formatHoras(horasUrgencia)}h</span>
+                          </div>
+                        )}
+                        {horasPrevencao > 0 && (
+                          <div className="flex justify-between">
+                            <span>Horas de Prevenção:</span>
+                            <span>{formatHoras(horasPrevencao)}h</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Estatísticas de Horas */}
+          <div className="mb-6">
+            <h3 className="font-semibold mb-3">Estatísticas</h3>
+            <div className="bg-white rounded-lg p-4 space-y-3">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Consultas de Rotina</span>
+                <span className="font-bold">
+                  {getTurnosMes()
+                    .filter(t => locais.find(l => l.id === t.localId))
+                    .reduce((sum, turno) => sum + (turno.numeroConsultas || 0), 0)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Consultas de Urgência</span>
+                <span className="font-bold">
+                  {getTurnosMes()
+                    .filter(t => locais.find(l => l.id === t.localId))
+                    .reduce((sum, turno) => sum + (turno.numeroUrgencias || 0), 0)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Horas de Urgência</span>
+                <span className="font-bold text-blue-600">
+                  {(() => {
+                    const h = getTurnosMes()
+                      .filter(t => t.tipo === 'Urgência' && locais.find(l => l.id === t.localId))
+                      .reduce((sum, turno) => sum + (turno.horasTrabalhadas || 0), 0);
+                    return (h % 1 === 0 ? h.toFixed(0) : h.toFixed(1)) + 'h';
+                  })()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Horas de Prevenção</span>
+                <span className="font-bold text-green-600">
+                  {(() => {
+                    const h = getTurnosMes()
+                      .filter(t => t.tipo === 'Prevenção' && locais.find(l => l.id === t.localId))
+                      .reduce((sum, turno) => sum + (turno.horasTrabalhadas || 0), 0);
+                    return (h % 1 === 0 ? h.toFixed(0) : h.toFixed(1)) + 'h';
+                  })()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Horas extra</span>
+                <span className="font-bold text-orange-600">
+                  {(() => {
+                    const h = getTurnosMes()
+                      .filter(t => locais.find(l => l.id === t.localId))
+                      .reduce((sum, turno) => sum + (turno.horasExtra || 0), 0);
+                    return (h % 1 === 0 ? h.toFixed(0) : h.toFixed(1)) + 'h';
+                  })()}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Botão Mapa de Pagamentos */}
+          <div className="mb-6">
+            <button
+              onClick={() => setShowMapaPagamentos(true)}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-blue-700"
+            >
+              <span>📊</span>
+              <span>Ver Mapa de Pagamentos</span>
+            </button>
+          </div>
+
+          {/* Modal Mapa de Pagamentos */}
+          {showMapaPagamentos && (
+            <MapaPagamentos
+              turnos={turnos}
+              locais={locais}
+              mesAtual={mesAtual}
+              onClose={() => setShowMapaPagamentos(false)}
+            />
+          )}
+        </>
+      ) : (
+        <>
+          {/* Navegação Ano */}
+          <div className="flex items-center justify-between mb-6">
+            <button onClick={() => setAnoAtual(anoAtual - 1)} className="p-2">
+              <ChevronLeft size={24} />
+            </button>
+            <h2 className="text-xl font-bold">{anoAtual}</h2>
+            <button onClick={() => setAnoAtual(anoAtual + 1)} className="p-2">
+              <ChevronRight size={24} />
+            </button>
+          </div>
+
+          {/* Total */}
+          <div className="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-xl mb-6 text-center">
+            <p className="text-sm opacity-90 mb-2">Total do Ano</p>
+            <p className="text-4xl font-bold">{calcularTotalAno().toFixed(2)}€</p>
+          </div>
+
+          {/* Por Local - Anual */}
+          {totaisPorLocalAno().length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-3">Por Local</h3>
+              <div className="space-y-2">
+                {totaisPorLocalAno().map(({ local, valor }) => {
+                  const turnosLocal = getTurnosAno().filter(t => t.localId === local.id);
+                  const consultasRotina = turnosLocal.reduce((sum, t) => sum + (t.numeroConsultas || 0), 0);
+                  const consultasUrgencia = turnosLocal.reduce((sum, t) => sum + (t.numeroUrgencias || 0), 0);
+                  const horasUrgencia = turnosLocal
+                    .filter(t => t.tipo === 'Urgência')
+                    .reduce((sum, t) => sum + (t.horasTrabalhadas || 0), 0);
+                  const horasPrevencao = turnosLocal
+                    .filter(t => t.tipo === 'Prevenção')
+                    .reduce((sum, t) => sum + (t.horasTrabalhadas || 0), 0);
+                  
+                  const formatHoras = (h) => h % 1 === 0 ? h.toFixed(0) : h.toFixed(1);
+                  
+                  return (
+                    <div key={local.id} className="bg-white p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: local.cor }} />
+                        <span className="font-medium">{local.nome}</span>
+                      </div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-2xl font-bold text-green-600">{valor.toFixed(2)}€</span>
+                        <span className="text-sm text-gray-500">
+                          {((valor / calcularTotalAno()) * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      {/* Estatísticas discretas */}
+                      <div className="text-xs text-gray-500 space-y-0.5 mt-2 pt-2 border-t">
+                        {consultasRotina > 0 && (
+                          <div className="flex justify-between">
+                            <span>Consultas de Rotina:</span>
+                            <span>{consultasRotina}</span>
+                          </div>
+                        )}
+                        {consultasUrgencia > 0 && (
+                          <div className="flex justify-between">
+                            <span>Consultas de Urgência:</span>
+                            <span>{consultasUrgencia}</span>
+                          </div>
+                        )}
+                        {horasUrgencia > 0 && (
+                          <div className="flex justify-between">
+                            <span>Horas de Urgência:</span>
+                            <span>{formatHoras(horasUrgencia)}h</span>
+                          </div>
+                        )}
+                        {horasPrevencao > 0 && (
+                          <div className="flex justify-between">
+                            <span>Horas de Prevenção:</span>
+                            <span>{formatHoras(horasPrevencao)}h</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Estatísticas Gerais do Ano */}
+          <div className="mb-6">
+            <h3 className="font-semibold mb-3">Estatísticas</h3>
+            <div className="bg-white rounded-lg p-4 space-y-3">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Consultas de Rotina</span>
+                <span className="font-bold">
+                  {getTurnosAno()
+                    .filter(t => locais.find(l => l.id === t.localId))
+                    .reduce((sum, turno) => sum + (turno.numeroConsultas || 0), 0)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Consultas de Urgência</span>
+                <span className="font-bold">
+                  {getTurnosAno()
+                    .filter(t => locais.find(l => l.id === t.localId))
+                    .reduce((sum, turno) => sum + (turno.numeroUrgencias || 0), 0)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Horas de Urgência</span>
+                <span className="font-bold text-blue-600">
+                  {(() => {
+                    const h = getTurnosAno()
+                      .filter(t => t.tipo === 'Urgência' && locais.find(l => l.id === t.localId))
+                      .reduce((sum, turno) => sum + (turno.horasTrabalhadas || 0), 0);
+                    return (h % 1 === 0 ? h.toFixed(0) : h.toFixed(1)) + 'h';
+                  })()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Horas de Prevenção</span>
+                <span className="font-bold text-green-600">
+                  {(() => {
+                    const h = getTurnosAno()
+                      .filter(t => t.tipo === 'Prevenção' && locais.find(l => l.id === t.localId))
+                      .reduce((sum, turno) => sum + (turno.horasTrabalhadas || 0), 0);
+                    return (h % 1 === 0 ? h.toFixed(0) : h.toFixed(1)) + 'h';
+                  })()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Horas extra</span>
+                <span className="font-bold text-orange-600">
+                  {(() => {
+                    const h = getTurnosAno()
+                      .filter(t => locais.find(l => l.id === t.localId))
+                      .reduce((sum, turno) => sum + (turno.horasExtra || 0), 0);
+                    return (h % 1 === 0 ? h.toFixed(0) : h.toFixed(1)) + 'h';
+                  })()}
+                </span>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Modal de Confirmação (substitui window.confirm)
+function ConfirmacaoModal({ mensagem, onConfirmar, onCancelar }) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)', paddingBottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}>
+      <div className="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4">
+        <h3 className="text-lg font-bold text-gray-900">{mensagem}</h3>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancelar}
+            className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirmar}
+            className="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600"
+          >
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Modal Novo Local (também serve para editar)
+function NovoLocalModal({ onClose, onSave, cores, localParaEditar = null }) {
+  const tiposDisponiveis = ['Consultório', 'Urgência', 'Prevenção', 'Férias'];
+  
+  const corPadraoPorTipo = (tipo) => {
+    switch(tipo) {
+      case 'Consultório': return cores[22]; // Amarelo
+      case 'Urgência': return cores[7]; // Azul
+      case 'Prevenção': return cores[12]; // Verde
+      case 'Férias': return cores[16]; // Vermelho
+      default: return cores[0];
+    }
+  };
+
+  const [tipo, setTipo] = useState(localParaEditar?.tipo || 'Consultório');
+  const [nome, setNome] = useState(localParaEditar?.nome || '');
+  const [abreviatura, setAbreviatura] = useState(localParaEditar?.abreviatura || '');
+  const [cor, setCor] = useState(localParaEditar?.cor || corPadraoPorTipo('Consultório'));
+  const [valorPorHora, setValorPorHora] = useState(localParaEditar?.valorPorHora || '');
+  const [valorHoraExtra, setValorHoraExtra] = useState(localParaEditar?.valorHoraExtra || '');
+  const [valorConsulta, setValorConsulta] = useState(localParaEditar?.valorConsulta || '');
+  const [valorUrgenciaConsultorio, setValorUrgenciaConsultorio] = useState(localParaEditar?.valorUrgenciaConsultorio || '');
+  const [comissaoClinica, setComissaoClinica] = useState(localParaEditar?.comissaoClinica || '');
+  const [horaInicioPadrao, setHoraInicioPadrao] = useState(localParaEditar?.horaInicioPadrao || '09:00');
+  const [horaFimPadrao, setHoraFimPadrao] = useState(localParaEditar?.horaFimPadrao || '21:00');
+  const [turno24hPadrao, setTurno24hPadrao] = useState(localParaEditar?.turno24hPadrao || false);
+
+  const handleTipoChange = (novoTipo) => {
+    setTipo(novoTipo);
+    setCor(corPadraoPorTipo(novoTipo));
+  };
+
+  const handleSave = () => {
+    const local = {
+      ...(localParaEditar && { id: localParaEditar.id }), // Preservar ID se for edição
+      nome,
+      abreviatura: abreviatura.substring(0, 5),
+      tipo,
+      cor,
+      valorPorHora: (tipo === 'Urgência' || tipo === 'Prevenção') ? parseFloat(valorPorHora) || 0 : null,
+      valorHoraExtra: (tipo === 'Urgência' || tipo === 'Prevenção') ? parseFloat(valorHoraExtra) || 0 : null,
+      valorConsulta: tipo === 'Consultório' ? parseFloat(valorConsulta) || 0 : null,
+      valorUrgenciaConsultorio: tipo === 'Consultório' ? parseFloat(valorUrgenciaConsultorio) || 0 : null,
+      comissaoClinica: tipo === 'Consultório' ? parseFloat(comissaoClinica) || 0 : null,
+      horaInicioPadrao: (tipo === 'Urgência' || tipo === 'Prevenção') ? horaInicioPadrao : null,
+      horaFimPadrao: (tipo === 'Urgência' || tipo === 'Prevenção') ? horaFimPadrao : null,
+      turno24hPadrao: (tipo === 'Urgência' || tipo === 'Prevenção') ? turno24hPadrao : false,
+    };
+    onSave(local);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50">
+      <div className="bg-white w-full h-full flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        {/* Header fixo */}
+        <div className="bg-white border-b px-4 py-4 flex justify-between items-center flex-shrink-0">
+          <h2 className="text-lg font-bold">{localParaEditar ? 'Editar Local' : 'Novo Local'}</h2>
+          <button onClick={onClose} className="p-2">
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Conteúdo scrollable - COMEÇA NO TOPO */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div>
+            <label className="block text-sm font-medium mb-2">Nome</label>
+            <input
+              type="text"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              className="w-full border rounded-lg p-3"
+              placeholder="Ex: Hospital Santa Maria"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Abreviatura (máx 5 caracteres)</label>
+            <input
+              type="text"
+              value={abreviatura}
+              onChange={(e) => setAbreviatura(e.target.value.substring(0, 5))}
+              className="w-full border rounded-lg p-3"
+              placeholder="Ex: HSM"
+              maxLength={5}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Usado no calendário: {abreviatura.length}/5 caracteres
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Tipo</label>
+            <select
+              value={tipo}
+              onChange={(e) => handleTipoChange(e.target.value)}
+              className="w-full border rounded-lg p-3"
+            >
+              {tiposDisponiveis.map(t => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Cor</label>
+            <div className="grid grid-cols-5 gap-3">
+              {cores.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setCor(c)}
+                  className={`w-12 h-12 rounded-full ${cor === c ? 'ring-4 ring-blue-500' : ''}`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {(tipo === 'Urgência' || tipo === 'Prevenção') && (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-2">Horário padrão do turno</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Início</label>
+                    <input
+                      type="time"
+                      value={horaInicioPadrao}
+                      onChange={(e) => setHoraInicioPadrao(e.target.value)}
+                      className="w-full border rounded-lg p-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Fim</label>
+                    <input
+                      type="time"
+                      value={horaFimPadrao}
+                      onChange={(e) => setHoraFimPadrao(e.target.value)}
+                      className="w-full border rounded-lg p-2"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                <span className="font-medium">Turno≥24h</span>
+                <button
+                  onClick={() => setTurno24hPadrao(!turno24hPadrao)}
+                  className={`w-12 h-6 rounded-full transition ${
+                    turno24hPadrao ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 bg-white rounded-full transition transform ${
+                      turno24hPadrao ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Valor/hora (€)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={valorPorHora}
+                  onChange={(e) => setValorPorHora(e.target.value)}
+                  onBlur={(e) => {
+                    // Auto-preencher valor hora extra se estiver vazio
+                    if (!valorHoraExtra && e.target.value) {
+                      setValorHoraExtra(e.target.value);
+                    }
+                  }}
+                  className="w-full border rounded-lg p-3"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Valor hora extra (€)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={valorHoraExtra}
+                  onChange={(e) => setValorHoraExtra(e.target.value)}
+                  className="w-full border rounded-lg p-3"
+                  placeholder="0.00"
+                />
+              </div>
+            </>
+          )}
+
+          {tipo === 'Consultório' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-2">Valor da Consulta de Rotina (€)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={valorConsulta}
+                  onChange={(e) => setValorConsulta(e.target.value)}
+                  className="w-full border rounded-lg p-3"
+                  placeholder="0.00"
+                />
+                {valorConsulta && comissaoClinica && (
+                  <div className="mt-1 text-xs text-gray-500 flex justify-between">
+                    <span>Valor líquido:</span>
+                    <span className="font-medium">
+                      {(parseFloat(valorConsulta) * (1 - parseFloat(comissaoClinica) / 100)).toFixed(2)}€
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Valor da Consulta de Urgência (€)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={valorUrgenciaConsultorio}
+                  onChange={(e) => setValorUrgenciaConsultorio(e.target.value)}
+                  className="w-full border rounded-lg p-3"
+                  placeholder="0.00"
+                />
+                {valorUrgenciaConsultorio && comissaoClinica && (
+                  <div className="mt-1 text-xs text-gray-500 flex justify-between">
+                    <span>Valor líquido:</span>
+                    <span className="font-medium">
+                      {(parseFloat(valorUrgenciaConsultorio) * (1 - parseFloat(comissaoClinica) / 100)).toFixed(2)}€
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Comissão da clínica (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={comissaoClinica}
+                  onChange={(e) => setComissaoClinica(e.target.value)}
+                  className="w-full border rounded-lg p-3"
+                  placeholder="0.0"
+                />
+              </div>
+            </>
+          )}
+
+          {tipo === 'Férias' && (
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-blue-700">
+                Para marcar férias, basta selecionar os dias no calendário. Não é necessário definir valores.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer fixo com botão */}
+        <div className="bg-white border-t p-4 flex-shrink-0">
+          <button
+            onClick={handleSave}
+            disabled={!nome || !abreviatura}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium disabled:bg-gray-300"
+          >
+            Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Modal Novo Turno
+function NovoTurnoModal({ data, locais, onClose, onSave }) {
+  const [localSelecionado, setLocalSelecionado] = useState(null);
+  const [horaInicio, setHoraInicio] = useState('09:00');
+  const [horaFim, setHoraFim] = useState('21:00');
+  const [turno24h, setTurno24h] = useState(false);
+  const [horasExtra, setHorasExtra] = useState('');
+  const [saidaAntecipada, setSaidaAntecipada] = useState('');
+  const [numeroConsultas, setNumeroConsultas] = useState('');
+  const [numeroUrgencias, setNumeroUrgencias] = useState('');
+
+  // Quando seleciona um local, define as horas padrão
+  const handleLocalSelecionado = (local) => {
+    setLocalSelecionado(local);
+    if (local.tipo === 'Urgência' || local.tipo === 'Prevenção') {
+      setHoraInicio(local.horaInicioPadrao || '09:00');
+      setHoraFim(local.horaFimPadrao || '21:00');
+      setTurno24h(local.turno24hPadrao || false); // Aplicar configuração padrão
+    }
+  };
+
+  if (!localSelecionado) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50">
+        <div className="bg-white w-full h-full flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+          {/* Header fixo */}
+          <div className="bg-white border-b px-4 py-4 flex justify-between items-center flex-shrink-0">
+            <h2 className="text-lg font-bold">
+              {data?.toLocaleDateString('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </h2>
+            <button onClick={onClose} className="p-2">
+              <X size={24} />
+            </button>
+          </div>
+
+          {/* Conteúdo scrollable */}
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2" style={{ WebkitOverflowScrolling: 'touch' }}>
+            {locais.map(local => (
+              <button
+                key={local.id}
+                onClick={() => handleLocalSelecionado(local)}
+                className="w-full bg-white border-2 p-4 rounded-lg flex items-center gap-3 hover:border-blue-500"
+              >
+                <div className="w-10 h-10 rounded-full" style={{ backgroundColor: local.cor }} />
+                <div className="text-left flex-1">
+                  <div className="font-semibold">{local.nome}</div>
+                  <div className="text-sm text-gray-500">{local.tipo}</div>
+                </div>
+                <ChevronRight size={20} className="text-gray-400" />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const calcularHoras = () => {
+    const extra = parseFloat(horasExtra) || 0;
+    const antecipada = parseFloat(saidaAntecipada) || 0;
+    
+    if (turno24h) {
+      // Turno≥24h: 24h + diferença entre saída e entrada + extra - antecipada
+      const [hI, mI] = horaInicio.split(':').map(Number);
+      const [hF, mF] = horaFim.split(':').map(Number);
+      let minutos = (hF * 60 + mF) - (hI * 60 + mI);
+      const diferencaHoras = minutos / 60;
+      return 24 + diferencaHoras + extra - antecipada;
+    }
+    
+    // Turno normal
+    const [hI, mI] = horaInicio.split(':').map(Number);
+    const [hF, mF] = horaFim.split(':').map(Number);
+    let minutos = (hF * 60 + mF) - (hI * 60 + mI);
+    const horas = minutos / 60;
+    return horas + extra - antecipada;
+  };
+
+  const handleSave = () => {
+    const turno = {
+      data: data.toISOString(),
+      localId: localSelecionado.id,
+      tipo: localSelecionado.tipo,
+    };
+
+    if (localSelecionado.tipo === 'Urgência' || localSelecionado.tipo === 'Prevenção') {
+      turno.horaInicio = horaInicio;
+      turno.horaFim = horaFim;
+      turno.turno24h = turno24h;
+      turno.horasExtra = parseFloat(horasExtra) || 0;
+      turno.saidaAntecipada = parseFloat(saidaAntecipada) || 0;
+      turno.horasTrabalhadas = calcularHoras();
+    } else if (localSelecionado.tipo === 'Consultório') {
+      turno.numeroConsultas = parseInt(numeroConsultas) || 0;
+      turno.numeroUrgencias = parseInt(numeroUrgencias) || 0;
+      turno.totalConsultas = (parseInt(numeroConsultas) || 0) + (parseInt(numeroUrgencias) || 0);
+    }
+    // Férias não precisa de dados adicionais
+
+    onSave(turno);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50">
+      <div className="bg-white w-full h-full flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        {/* Header fixo */}
+        <div className="bg-white border-b px-4 py-4 flex justify-between items-center flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setLocalSelecionado(null)}>
+              <ChevronLeft size={24} />
+            </button>
+            <div>
+              <div className="font-bold">{localSelecionado.nome}</div>
+              <div className="text-sm text-gray-500">
+                {data?.toLocaleDateString('pt-PT')}
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2">
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Conteúdo scrollable */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {(localSelecionado.tipo === 'Urgência' || localSelecionado.tipo === 'Prevenção') ? (
+            <>
+              <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                <span className="font-medium">Turno≥24h</span>
+                <button
+                  onClick={() => setTurno24h(!turno24h)}
+                  className={`w-12 h-6 rounded-full transition ${
+                    turno24h ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 bg-white rounded-full transition transform ${
+                      turno24h ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Hora início</label>
+                <input
+                  type="time"
+                  value={horaInicio}
+                  onChange={(e) => setHoraInicio(e.target.value)}
+                  className="w-full border rounded-lg p-3"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Hora fim</label>
+                <input
+                  type="time"
+                  value={horaFim}
+                  onChange={(e) => setHoraFim(e.target.value)}
+                  className="w-full border rounded-lg p-3"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Horas extra</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  value={horasExtra}
+                  onChange={(e) => setHorasExtra(e.target.value)}
+                  className="w-full border rounded-lg p-3"
+                  placeholder="0.0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Saída antecipada (h)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  value={saidaAntecipada}
+                  onChange={(e) => setSaidaAntecipada(e.target.value)}
+                  className="w-full border rounded-lg p-3"
+                  placeholder="0.0"
+                />
+              </div>
+              <div className="bg-gray-100 p-4 rounded-lg">
+                <div className="text-sm text-gray-600">Total efetivo</div>
+                <div className="text-2xl font-bold text-green-600">{calcularHoras().toFixed(1)}h</div>
+              </div>
+            </>
+          ) : localSelecionado.tipo === 'Consultório' ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-2">Consultas de Rotina</label>
+                <input
+                  type="number"
+                  value={numeroConsultas}
+                  onChange={(e) => setNumeroConsultas(e.target.value)}
+                  className="w-full border rounded-lg p-3"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Consultas de Urgência</label>
+                <input
+                  type="number"
+                  value={numeroUrgencias}
+                  onChange={(e) => setNumeroUrgencias(e.target.value)}
+                  className="w-full border rounded-lg p-3"
+                  placeholder="0"
+                />
+              </div>
+              <div className="bg-gray-100 p-4 rounded-lg">
+                <div className="text-sm text-gray-600">Total</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {(parseInt(numeroConsultas) || 0) + (parseInt(numeroUrgencias) || 0)} consultas
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="bg-blue-50 p-4 rounded-lg text-center">
+              <p className="text-blue-700">Férias marcadas neste dia</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer fixo com botão */}
+        <div className="bg-white border-t p-4 flex-shrink-0">
+          <button
+            onClick={handleSave}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium"
+          >
+            Guardar Turno
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Modal Detalhes do Turno
+function DetalhesTurnoModal({ turno, locais, turnos, setTurnos, user, onClose }) {
+  const local = locais.find(l => l.id === turno.localId);
+
+  // Estados editáveis
+  const [horaInicio, setHoraInicio] = useState(turno.horaInicio || '09:00');
+  const [horaFim, setHoraFim] = useState(turno.horaFim || '21:00');
+  const [turno24h, setTurno24h] = useState(turno.turno24h || false);
+  const [horasExtra, setHorasExtra] = useState(turno.horasExtra || 0);
+  const [saidaAntecipada, setSaidaAntecipada] = useState(turno.saidaAntecipada || 0);
+  const [numeroConsultas, setNumeroConsultas] = useState(turno.numeroConsultas || 0);
+  const [numeroUrgencias, setNumeroUrgencias] = useState(turno.numeroUrgencias || 0);
+  const [showConfirmacao, setShowConfirmacao] = useState(false);
+  const [showCopiar, setShowCopiar] = useState(false);
+  const [novaData, setNovaData] = useState('');
+
+  const copiarTurno = async () => {
+    if (!novaData) return alert('Escolhe uma data');
+    const copia = { ...turno, id: Date.now(), data: novaData + 'T12:00:00.000Z' };
+    await db.collection('users').doc(user.uid).collection('turnos').doc(String(copia.id)).set(copia);
+    setShowCopiar(false);
+    onClose();
+  };
+
+  const calcularHoras = () => {
+    const extra = parseFloat(horasExtra) || 0;
+    const antecipada = parseFloat(saidaAntecipada) || 0;
+    
+    if (turno24h) {
+      // Turno≥24h: 24h + diferença entre saída e entrada + extra - antecipada
+      const [hI, mI] = horaInicio.split(':').map(Number);
+      const [hF, mF] = horaFim.split(':').map(Number);
+      let minutos = (hF * 60 + mF) - (hI * 60 + mI);
+      const diferencaHoras = minutos / 60;
+      return 24 + diferencaHoras + extra - antecipada;
+    }
+    
+    // Turno normal
+    const [hI, mI] = horaInicio.split(':').map(Number);
+    const [hF, mF] = horaFim.split(':').map(Number);
+    let minutos = (hF * 60 + mF) - (hI * 60 + mI);
+    const horas = minutos / 60;
+    return horas + extra - antecipada;
+  };
+
+  const salvarAlteracoes = async () => {
+    const turnoAtualizado = { ...turno };
+    
+    if (turno.tipo === 'Urgência' || turno.tipo === 'Prevenção') {
+      turnoAtualizado.horaInicio = horaInicio;
+      turnoAtualizado.horaFim = horaFim;
+      turnoAtualizado.turno24h = turno24h;
+      turnoAtualizado.horasExtra = parseFloat(horasExtra) || 0;
+      turnoAtualizado.saidaAntecipada = parseFloat(saidaAntecipada) || 0;
+      turnoAtualizado.horasTrabalhadas = calcularHoras();
+    } else if (turno.tipo === 'Consultório') {
+      turnoAtualizado.numeroConsultas = parseInt(numeroConsultas) || 0;
+      turnoAtualizado.numeroUrgencias = parseInt(numeroUrgencias) || 0;
+      turnoAtualizado.totalConsultas = (parseInt(numeroConsultas) || 0) + (parseInt(numeroUrgencias) || 0);
+    }
+
+    await db.collection('users').doc(user.uid).collection('turnos').doc(String(turno.id)).set(turnoAtualizado);
+    onClose();
+  };
+
+  const eliminarTurno = async () => {
+    await db.collection('users').doc(user.uid).collection('turnos').doc(String(turno.id)).delete();
+    onClose();
+  };
+
+  const calcularValor = () => {
+    if (!local) return 0;
+    
+    if (turno.tipo === 'Urgência' || turno.tipo === 'Prevenção') {
+      const horasTrabalhadas = calcularHoras();
+      const horasExtraAtual = parseFloat(horasExtra) || 0;
+      
+      // horasTrabalhadas já tem tudo calculado (incluindo saída antecipada)
+      const horasNormais = horasTrabalhadas - horasExtraAtual;
+      
+      const valorHoraNormal = local.valorPorHora || 0;
+      const valorHoraExtraRate = local.valorHoraExtra || valorHoraNormal;
+      
+      const valorNormal = horasNormais * valorHoraNormal;
+      const valorExtraParcela = horasExtraAtual * valorHoraExtraRate;
+      
+      return valorNormal + valorExtraParcela;
+    } else if (turno.tipo === 'Consultório') {
+      const consultasRotina = parseInt(numeroConsultas) || 0;
+      const consultasUrgencia = parseInt(numeroUrgencias) || 0;
+      const valorBrutoConsultas = consultasRotina * (local.valorConsulta || 0);
+      const valorBrutoUrgencias = consultasUrgencia * (local.valorUrgenciaConsultorio || 0);
+      const valorBrutoTotal = valorBrutoConsultas + valorBrutoUrgencias;
+      
+      // Aplicar comissão da clínica
+      const comissao = (local.comissaoClinica || 0) / 100;
+      const valorLiquido = valorBrutoTotal * (1 - comissao);
+      
+      return valorLiquido;
+    }
+    
+    return 0; // Férias
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50">
+      <div className="bg-white w-full h-full flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        {/* Header fixo */}
+        <div className="bg-white border-b px-4 py-4 flex justify-between items-center flex-shrink-0">
+          <h2 className="text-lg font-bold">Detalhes do Turno</h2>
+          <button onClick={onClose} className="p-2">
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Conteúdo scrollable */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {local && (
+            <>
+              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                <div className="w-12 h-12 rounded-full" style={{ backgroundColor: local.cor }} />
+                <div>
+                  <div className="font-bold">{local.nome}</div>
+                  <div className="text-sm text-gray-500">{local.tipo}</div>
+                  <div className="text-sm text-gray-500">
+                    {new Date(turno.data).toLocaleDateString('pt-PT')}
+                  </div>
+                </div>
+              </div>
+
+              {(turno.tipo === 'Urgência' || turno.tipo === 'Prevenção') && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                    <span className="font-medium">Turno≥24h</span>
+                    <button
+                      type="button"
+                      onClick={() => setTurno24h(!turno24h)}
+                      className={`w-12 h-6 rounded-full transition ${
+                        turno24h ? 'bg-blue-600' : 'bg-gray-300'
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 bg-white rounded-full transition transform ${
+                          turno24h ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Hora início</label>
+                    <input
+                      type="time"
+                      value={horaInicio}
+                      onChange={(e) => setHoraInicio(e.target.value)}
+                      className="w-full border rounded-lg p-3"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Hora fim</label>
+                    <input
+                      type="time"
+                      value={horaFim}
+                      onChange={(e) => setHoraFim(e.target.value)}
+                      className="w-full border rounded-lg p-3"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Horas extra</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={horasExtra}
+                      onChange={(e) => setHorasExtra(e.target.value)}
+                      className="w-full border rounded-lg p-3"
+                      placeholder="0.0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Saída antecipada (h)</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={saidaAntecipada}
+                      onChange={(e) => setSaidaAntecipada(e.target.value)}
+                      className="w-full border rounded-lg p-3"
+                      placeholder="0.0"
+                    />
+                  </div>
+                  <div className="flex justify-between p-3 bg-green-50 rounded">
+                    <span className="text-gray-600 font-medium">Total horas</span>
+                    <span className="font-bold text-green-600">{calcularHoras().toFixed(1)}h</span>
+                  </div>
+                </div>
+              )}
+
+              {turno.tipo === 'Consultório' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Consultas de rotina</label>
+                    <input
+                      type="number"
+                      value={numeroConsultas}
+                      onChange={(e) => setNumeroConsultas(e.target.value)}
+                      className="w-full border rounded-lg p-3"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Consultas de urgência</label>
+                    <input
+                      type="number"
+                      value={numeroUrgencias}
+                      onChange={(e) => setNumeroUrgencias(e.target.value)}
+                      className="w-full border rounded-lg p-3"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="flex justify-between p-3 bg-green-50 rounded">
+                    <span className="text-gray-600 font-medium">Total consultas</span>
+                    <span className="font-bold text-green-600">
+                      {(parseInt(numeroConsultas) || 0) + (parseInt(numeroUrgencias) || 0)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {turno.tipo === 'Férias' && (
+                <div className="bg-blue-50 p-4 rounded-lg text-center">
+                  <p className="text-blue-700 font-medium">Dia de Férias</p>
+                </div>
+              )}
+
+              {turno.tipo !== 'Férias' && (
+                <div className="p-4 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl">
+                  <div className="text-sm opacity-90 mb-1">Valor do Turno</div>
+                  <div className="text-3xl font-bold">{calcularValor().toFixed(2)}€</div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer fixo com botões */}
+        {local && (
+          <div className="bg-white border-t p-4 flex-shrink-0 space-y-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                salvarAlteracoes();
+              }}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium active:bg-blue-700"
+            >
+              Guardar Alterações
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCopiar(true)}
+              className="w-full bg-green-600 text-white py-3 rounded-lg font-medium active:bg-green-700"
+            >
+              📋 Duplicar
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowConfirmacao(true);
+              }}
+              className="w-full bg-red-500 text-white py-3 rounded-lg font-medium active:bg-red-600"
+            >
+              Eliminar Turno
+            </button>
+          </div>
+        )}
+
+        {/* Modal Copiar */}
+        {showCopiar && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+              <h3 className="text-lg font-bold mb-4">Duplicar Turno</h3>
+              <p className="text-sm text-gray-600 mb-4">Escolhe a nova data:</p>
+              <input
+                type="date"
+                value={novaData}
+                onChange={(e) => setNovaData(e.target.value)}
+                className="w-full p-3 border rounded-lg mb-4"
+              />
+              <div className="flex gap-2">
+                <button onClick={() => setShowCopiar(false)} className="flex-1 bg-gray-200 py-2 rounded-lg">Cancelar</button>
+                <button onClick={copiarTurno} className="flex-1 bg-blue-600 text-white py-2 rounded-lg">Criar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Confirmação */}
+        {showConfirmacao && (
+          <ConfirmacaoModal
+            mensagem="Tem certeza que deseja eliminar este turno?"
+            onConfirmar={() => {
+              setShowConfirmacao(false);
+              eliminarTurno();
+            }}
+            onCancelar={() => setShowConfirmacao(false)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+    // Render app
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
+<!-- Build: 1776985905 -->
